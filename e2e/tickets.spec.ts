@@ -11,9 +11,9 @@ test.describe('Tickets Flow', () => {
     await page.waitForSelector('text=PL-');
 
     // Verify filter buttons exist
-    expect(page.locator('button:has-text("All")')).toBeTruthy();
-    expect(page.locator('button:has-text("Open")')).toBeTruthy();
-    expect(page.locator('button:has-text("Resolved")')).toBeTruthy();
+    expect(page.getByRole('button', { name: 'All', exact: true })).toBeTruthy();
+    expect(page.getByRole('button', { name: 'Open', exact: true })).toBeTruthy();
+    expect(page.getByRole('button', { name: 'Resolved', exact: true })).toBeTruthy();
   });
 
   test('should filter tickets by status', async ({ page }) => {
@@ -23,8 +23,8 @@ test.describe('Tickets Flow', () => {
     // Wait for initial load
     await page.waitForSelector('text=PL-');
 
-    // Click Open filter
-    await page.locator('button:has-text("Open")').click();
+    // Click Open filter (exact match — ticket rows also render an "Open" status badge)
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
 
     // Should show only open tickets (this depends on mock data)
     const tickets = await page.locator('button:has-text("PL-")').count();
@@ -62,5 +62,52 @@ test.describe('Tickets Flow', () => {
 
     // Modal should close, ticket should be gone from current view if filters are active
     await page.waitForSelector('text=PL-', { timeout: 5000 });
+  });
+
+  test('should show Unmapped and Mapped filter pills', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('button:has-text("Tickets")').click();
+    await page.waitForSelector('text=PL-');
+
+    await expect(page.getByRole('button', { name: 'Unmapped', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Mapped', exact: true })).toBeVisible();
+  });
+
+  test('Unmapped filter only shows tickets with no matched template', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('button:has-text("Tickets")').click();
+    await page.waitForSelector('text=PL-');
+
+    await page.getByRole('button', { name: 'Unmapped', exact: true }).click();
+    await page.waitForTimeout(300);
+
+    const ticketButtons = page.locator('ul > li > button');
+    const count = await ticketButtons.count();
+
+    // Every visible ticket under "Unmapped" should open a modal that shows
+    // the "no matching template" copy rather than a Specialist Diagnostic card.
+    for (let i = 0; i < count; i++) {
+      await ticketButtons.nth(i).click();
+      await expect(
+        page.locator('text=No matching error template')
+      ).toBeVisible();
+      await page.locator('button:has-text("Cancel")').click();
+    }
+  });
+
+  test('Mapped filter only shows tickets with a matched template', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('button:has-text("Tickets")').click();
+    await page.waitForSelector('text=PL-');
+
+    await page.getByRole('button', { name: 'Mapped', exact: true }).click();
+    await page.waitForTimeout(300);
+
+    const ticketButtons = page.locator('ul > li > button');
+    const count = await ticketButtons.count();
+    expect(count).toBeGreaterThan(0);
+
+    await ticketButtons.first().click();
+    await expect(page.locator('text=Specialist Diagnostic —')).toBeVisible();
   });
 });

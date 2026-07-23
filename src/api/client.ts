@@ -81,12 +81,13 @@ export interface CreateErrorTemplateRequest {
   specialist_diagnostic: string;
   employee_message: string;
   self_service_steps?: string;
+  ticket_id?: string;
 }
 
 export async function createErrorTemplate(
   template: CreateErrorTemplateRequest
-): Promise<{ status: string; id: string }> {
-  const data = await request<{ status: string; id: string }>(
+): Promise<{ status: string; id: string; ticket?: Ticket }> {
+  const data = await request<{ status: string; id: string; ticket?: Ticket; message?: string }>(
     "/api/error-templates",
     { method: "POST", body: JSON.stringify(template) }
   );

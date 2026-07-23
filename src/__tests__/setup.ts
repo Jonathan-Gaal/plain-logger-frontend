@@ -1,4 +1,4 @@
-import { expect, afterEach, vi } from 'vitest';
+import { afterEach, beforeAll, afterAll } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { setupServer } from 'msw/node';
@@ -41,34 +41,84 @@ export const mockServer = setupServer(
       ],
     });
   }),
-  http.get('http://localhost:3000/api/tickets', () => {
-    return HttpResponse.json({
-      status: 'ok',
-      tickets: [
-        {
-          id: 'ticket-1',
-          ticketNumber: 'PL-001',
-          submittedBy: 'test-user',
-          extractedCode: 'TEST_ERROR',
-          status: 'open',
-          severity: 'medium',
-          assignedSpecialist: null,
-          resolutionNote: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          resolvedAt: null,
+  http.get('http://localhost:3000/api/tickets', ({ request }) => {
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status');
+    const tickets = status ? mockTickets.filter((t) => t.status === status) : mockTickets;
+    return HttpResponse.json({ status: 'ok', tickets });
+  }),
+  http.post('http://localhost:3000/api/error-templates', async ({ request }) => {
+    const body = (await request.json()) as { ticket_id?: string; internal_system: string };
+    const response: Record<string, unknown> = { status: 'ok', id: 'new-template-id' };
+    if (body.ticket_id) {
+      const ticket = mockTickets.find((t) => t.id === body.ticket_id);
+      if (ticket) {
+        response.ticket = {
+          ...ticket,
           matched: {
-            internalSystem: 'test-system',
-            specialistDiagnostic: 'Test diagnostic',
-            employeeMessage: 'Test message',
+            internalSystem: body.internal_system,
+            specialistDiagnostic: 'Newly created diagnostic',
+            employeeMessage: 'Newly created employee message',
             isSelfService: false,
             selfServiceSteps: null,
           },
-        },
-      ],
-    });
+        };
+      }
+    }
+    return HttpResponse.json(response, { status: 201 });
   })
 );
+
+export const mockTickets = [
+  {
+    id: 'ticket-1',
+    ticketNumber: 'PL-001',
+    submittedBy: 'test-user',
+    extractedCode: 'UNMAPPED_CODE_1',
+    status: 'open',
+    severity: 'medium',
+    assignedSpecialist: null,
+    resolutionNote: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    resolvedAt: null,
+    matched: null,
+  },
+  {
+    id: 'ticket-2',
+    ticketNumber: 'PL-002',
+    submittedBy: 'test-user',
+    extractedCode: 'TEST_ERROR',
+    status: 'open',
+    severity: 'medium',
+    assignedSpecialist: null,
+    resolutionNote: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    resolvedAt: null,
+    matched: {
+      internalSystem: 'test-system',
+      specialistDiagnostic: 'Test diagnostic',
+      employeeMessage: 'Test message',
+      isSelfService: false,
+      selfServiceSteps: null,
+    },
+  },
+  {
+    id: 'ticket-3',
+    ticketNumber: 'PL-003',
+    submittedBy: 'test-user',
+    extractedCode: 'UNMAPPED_CODE_2',
+    status: 'resolved',
+    severity: 'low',
+    assignedSpecialist: null,
+    resolutionNote: 'Fixed manually',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    resolvedAt: new Date().toISOString(),
+    matched: null,
+  },
+];
 
 beforeAll(() => mockServer.listen());
 afterEach(() => mockServer.resetHandlers());

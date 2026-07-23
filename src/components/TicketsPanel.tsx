@@ -6,15 +6,28 @@ import { StatusBadge } from "./StatusBadge";
 import { TicketDetailModal } from "./TicketDetailModal";
 import { formatTimestamp, cn } from "../lib/utils";
 
-const FILTERS: Array<{ label: string; value: TicketStatus | "all" }> = [
+type TicketFilter = TicketStatus | "all" | "unmapped" | "mapped";
+
+const FILTERS: Array<{ label: string; value: TicketFilter }> = [
   { label: "All", value: "all" },
   { label: "Open", value: "open" },
   { label: "In Progress", value: "in_progress" },
   { label: "Resolved", value: "resolved" },
+  { label: "Unmapped", value: "unmapped" },
+  { label: "Mapped", value: "mapped" },
 ];
 
+/** "unmapped"/"mapped" filter by whether a ticket has a matched template — a
+ * dimension the backend doesn't query by, so fetch everything and filter here. */
+function matchesFilter(ticket: Ticket, filter: TicketFilter): boolean {
+  if (filter === "unmapped") return ticket.matched === null;
+  if (filter === "mapped") return ticket.matched !== null;
+  if (filter === "all") return true;
+  return ticket.status === filter;
+}
+
 export function TicketsPanel() {
-  const [filter, setFilter] = useState<TicketStatus | "all">("all");
+  const [filter, setFilter] = useState<TicketFilter>("all");
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +37,12 @@ export function TicketsPanel() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchTickets(filter);
+      let data: Ticket[];
+      if (filter === "unmapped" || filter === "mapped") {
+        data = (await fetchTickets("all")).filter((t) => matchesFilter(t, filter));
+      } else {
+        data = await fetchTickets(filter);
+      }
       setTickets(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load tickets.");
@@ -38,16 +56,12 @@ export function TicketsPanel() {
   }, [load]);
 
   function handleUpdated(updated: Ticket) {
-    setTickets((cur) => {
-      // If filter is "all", just update the ticket
-      if (filter === "all") {
-        return cur.map((t) => (t.id === updated.id ? updated : t));
-      }
-      // If filter is a specific status, remove ticket if it no longer matches, update if it does
-      return cur
+    setSelected((cur) => (cur && cur.id === updated.id ? updated : cur));
+    setTickets((cur) =>
+      cur
         .map((t) => (t.id === updated.id ? updated : t))
-        .filter((t) => t.status === filter);
-    });
+        .filter((t) => matchesFilter(t, filter))
+    );
   }
 
   return (

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { parseLog, fetchHistory, fetchTickets } from '../../api/client';
 
 describe('API Client', () => {
@@ -6,7 +6,9 @@ describe('API Client', () => {
     it('should parse valid JSON and return matched result', async () => {
       const result = await parseLog('{"error_code": "TEST_ERROR"}');
       expect(result.status).toBe('matched');
-      expect(result.errorCode).toBe('TEST_ERROR');
+      if (result.status === 'matched') {
+        expect(result.errorCode).toBe('TEST_ERROR');
+      }
     });
 
     it('should reject empty payload', async () => {

@@ -67,9 +67,12 @@ export function TicketDetailModal({
     }
     setCreatingTemplate(true);
     try {
-      await createErrorTemplate(form);
+      const result = await createErrorTemplate({ ...form, ticket_id: ticket.id });
       setShowCreateTemplate(false);
       setError(null);
+      if (result.ticket) {
+        onUpdated(result.ticket);
+      }
       // Re-parse to show the newly created template
       await handleReparse();
     } catch (err) {
