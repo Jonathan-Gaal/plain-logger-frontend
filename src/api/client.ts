@@ -73,4 +73,27 @@ export async function updateTicket(
   return data.ticket;
 }
 
+export interface CreateErrorTemplateRequest {
+  error_code: string;
+  internal_system: string;
+  category: string;
+  severity: "low" | "medium" | "high" | "critical";
+  specialist_diagnostic: string;
+  employee_message: string;
+  self_service_steps?: string;
+}
+
+export async function createErrorTemplate(
+  template: CreateErrorTemplateRequest
+): Promise<{ status: string; id: string }> {
+  const data = await request<{ status: string; id: string }>(
+    "/api/error-templates",
+    { method: "POST", body: JSON.stringify(template) }
+  );
+  if (data.status !== "ok") {
+    throw new ApiError(data?.message ?? "Failed to create error template.");
+  }
+  return data;
+}
+
 export { ApiError };

@@ -38,7 +38,16 @@ export function TicketsPanel() {
   }, [load]);
 
   function handleUpdated(updated: Ticket) {
-    setTickets((cur) => cur.map((t) => (t.id === updated.id ? updated : t)));
+    setTickets((cur) => {
+      // If filter is "all", just update the ticket
+      if (filter === "all") {
+        return cur.map((t) => (t.id === updated.id ? updated : t));
+      }
+      // If filter is a specific status, remove ticket if it no longer matches, update if it does
+      return cur
+        .map((t) => (t.id === updated.id ? updated : t))
+        .filter((t) => t.status === filter);
+    });
   }
 
   return (

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X } from "lucide-react";
-import { parseLog, updateTicket } from "../api/client";
+import { parseLog, updateTicket, createErrorTemplate, type CreateErrorTemplateRequest } from "../api/client";
 import type { ParseLogResponse, Ticket, TicketStatus } from "../types";
 import { SeverityBadge } from "./SeverityBadge";
 import { StatusBadge } from "./StatusBadge";
@@ -29,6 +29,16 @@ export function TicketDetailModal({
   const [parseResult, setParseResult] = useState<ParseLogResponse | null>(null);
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
+  const [showCreateTemplate, setShowCreateTemplate] = useState(false);
+  const [templateForm, setTemplateForm] = useState<Partial<CreateErrorTemplateRequest>>({
+    error_code: ticket.extractedCode ?? "",
+    internal_system: "",
+    category: "config",
+    severity: "medium",
+    specialist_diagnostic: "",
+    employee_message: "",
+  });
+  const [creatingTemplate, setCreatingTemplate] = useState(false);
 
   const needsResolutionNote = status === "resolved";
   const payloadJson = ticket.extractedCode
@@ -46,6 +56,26 @@ export function TicketDetailModal({
       setParseError(err instanceof Error ? err.message : "Failed to parse.");
     } finally {
       setParsing(false);
+    }
+  }
+
+  async function handleCreateTemplate() {
+    const form = templateForm as CreateErrorTemplateRequest;
+    if (!form.error_code || !form.internal_system || !form.specialist_diagnostic || !form.employee_message) {
+      setError("All fields except self_service_steps are required.");
+      return;
+    }
+    setCreatingTemplate(true);
+    try {
+      await createErrorTemplate(form);
+      setShowCreateTemplate(false);
+      setError(null);
+      // Re-parse to show the newly created template
+      await handleReparse();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create error template.");
+    } finally {
+      setCreatingTemplate(false);
     }
   }
 
@@ -169,9 +199,96 @@ export function TicketDetailModal({
               </div>
             </div>
           ) : (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              No matching error template — this ticket's code was not recognized.
-            </p>
+            <div className="space-y-3">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                No matching error template — this ticket's code was not recognized.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowCreateTemplate(!showCreateTemplate)}
+                className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
+              >
+                {showCreateTemplate ? "Cancel" : "Add error code to database"}
+              </button>
+
+              {showCreateTemplate && (
+                <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/20">
+                  <input
+                    type="text"
+                    placeholder="Error code"
+                    disabled
+                    value={templateForm.error_code || ""}
+                    className="w-full rounded-md border border-slate-300 bg-slate-100 px-2.5 py-1.5 text-xs disabled:opacity-60 dark:border-slate-600 dark:bg-slate-800"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Internal system (e.g. auth-service)"
+                    value={templateForm.internal_system || ""}
+                    onChange={(e) => setTemplateForm({ ...templateForm, internal_system: e.target.value })}
+                    className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs dark:border-slate-600 dark:bg-slate-800"
+                  />
+                  <select
+                    value={templateForm.category || "config"}
+                    onChange={(e) => setTemplateForm({ ...templateForm, category: e.target.value })}
+                    className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs dark:border-slate-600 dark:bg-slate-800"
+                  >
+                    <option value="auth">Auth</option>
+                    <option value="timeout">Timeout</option>
+                    <option value="queue">Queue</option>
+                    <option value="db">Database</option>
+                    <option value="config">Config</option>
+                  </select>
+                  <select
+                    value={templateForm.severity || "medium"}
+                    onChange={(e) => setTemplateForm({ ...templateForm, severity: e.target.value as any })}
+                    className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs dark:border-slate-600 dark:bg-slate-800"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                  <textarea
+                    placeholder="Specialist diagnostic"
+                    value={templateForm.specialist_diagnostic || ""}
+                    onChange={(e) => setTemplateForm({ ...templateForm, specialist_diagnostic: e.target.value })}
+                    rows={2}
+                    className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs dark:border-slate-600 dark:bg-slate-800"
+                  />
+                  <textarea
+                    placeholder="Employee message"
+                    value={templateForm.employee_message || ""}
+                    onChange={(e) => setTemplateForm({ ...templateForm, employee_message: e.target.value })}
+                    rows={2}
+                    className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs dark:border-slate-600 dark:bg-slate-800"
+                  />
+                  {templateForm.severity !== "low" && (
+                    <textarea
+                      placeholder="Self-service steps (optional, only for low severity)"
+                      disabled
+                      className="w-full rounded-md border border-slate-300 bg-slate-100 px-2.5 py-1.5 text-xs disabled:opacity-60 dark:border-slate-600 dark:bg-slate-800"
+                    />
+                  )}
+                  {templateForm.severity === "low" && (
+                    <textarea
+                      placeholder="Self-service steps (optional)"
+                      value={templateForm.self_service_steps || ""}
+                      onChange={(e) => setTemplateForm({ ...templateForm, self_service_steps: e.target.value })}
+                      rows={2}
+                      className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs dark:border-slate-600 dark:bg-slate-800"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleCreateTemplate}
+                    disabled={creatingTemplate}
+                    className="w-full rounded-md bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-40 dark:bg-blue-700 dark:hover:bg-blue-600"
+                  >
+                    {creatingTemplate ? "Creating..." : "Create template & parse"}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           <div className="space-y-3 border-t border-slate-200 pt-4 dark:border-slate-700">
