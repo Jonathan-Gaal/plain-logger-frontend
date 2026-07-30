@@ -56,6 +56,7 @@ export function TicketDetailModal({
     employee_message: "",
   });
   const [creatingTemplate, setCreatingTemplate] = useState(false);
+  const [templateError, setTemplateError] = useState<string | null>(null);
   const [editingSpecialistDiagnostic, setEditingSpecialistDiagnostic] = useState(false);
   const [editingEmployeeMessage, setEditingEmployeeMessage] = useState(false);
   const [editSpecialistText, setEditSpecialistText] = useState(ticket.matched?.specialistDiagnostic ?? "");
@@ -91,21 +92,30 @@ export function TicketDetailModal({
       !form.specialist_diagnostic ||
       !form.employee_message
     ) {
-      setError("All fields except self-service steps are required.");
+      setTemplateError("All fields except self-service steps are required.");
       return;
     }
     setCreatingTemplate(true);
+    setTemplateError(null);
     try {
       const result = await createErrorTemplate({ ...form, ticket_id: ticket.id });
       setShowCreateTemplate(false);
       setError(null);
       if (result.ticket) {
         onUpdated(result.ticket);
+      } else {
+        // The template was created but the backend did not link it to this
+        // ticket, so the ticket is still unmapped. Say so instead of letting
+        // the form close as though the mapping had succeeded.
+        setTemplateError(
+          "Template created, but it could not be linked to this ticket. Reopen the ticket and try again."
+        );
+        setShowCreateTemplate(true);
       }
       // Re-parse to show the newly created template
       await handleReparse();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create error template.");
+      setTemplateError(err instanceof Error ? err.message : "Failed to create error template.");
     } finally {
       setCreatingTemplate(false);
     }
@@ -384,7 +394,10 @@ export function TicketDetailModal({
               </p>
               <button
                 type="button"
-                onClick={() => setShowCreateTemplate(!showCreateTemplate)}
+                onClick={() => {
+                  setShowCreateTemplate(!showCreateTemplate);
+                  setTemplateError(null);
+                }}
                 className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
               >
                 {showCreateTemplate ? "Cancel" : "Add error code to database"}
@@ -459,6 +472,15 @@ export function TicketDetailModal({
                       rows={2}
                       className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs dark:border-slate-600 dark:bg-slate-800"
                     />
+                  )}
+                  {/* Rendered inside the form, not in the shared error slot
+                      at the bottom of the modal — that one sits below the
+                      Resolution Note, far enough down that a validation
+                      failure here looked like the button doing nothing. */}
+                  {templateError && (
+                    <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+                      {templateError}
+                    </p>
                   )}
                   <button
                     type="button"

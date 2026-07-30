@@ -111,13 +111,19 @@ describe('TicketsPanel', () => {
     await user.type(screen.getByPlaceholderText('Employee message'), 'employee message text');
     await user.click(screen.getByText('Create template & parse'));
 
-    await waitFor(() =>
-      expect(
-        screen.getByText('All fields except self-service steps are required.')
-      ).toBeInTheDocument()
-    );
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('All fields except self-service steps are required.');
+
     // Still on the form, not switched over to a matched card.
-    expect(screen.getByText('Create template & parse')).toBeInTheDocument();
+    const submit = screen.getByText('Create template & parse');
+    expect(submit).toBeInTheDocument();
+
+    // The message has to sit inside the create-template form, next to the
+    // button that triggered it. It used to render in the modal's shared error
+    // slot far below the Resolution Note, so a failed submit looked like the
+    // button doing nothing at all and the ticket silently stayed unmapped.
+    const form = submit.closest('div');
+    expect(form).toContainElement(alert);
   });
 
   it('hides the edit affordances on a ticket that is not resolved', async () => {
