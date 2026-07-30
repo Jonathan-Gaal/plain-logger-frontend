@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { fetchTickets } from "../api/client";
-import type { Ticket, TicketStatus } from "../types";
+import type { Severity, Ticket, TicketStatus } from "../types";
 import { SeverityBadge } from "./SeverityBadge";
 import { StatusBadge } from "./StatusBadge";
 import { TicketDetailModal } from "./TicketDetailModal";
@@ -26,12 +26,53 @@ function matchesFilter(ticket: Ticket, filter: TicketFilter): boolean {
   return ticket.status === filter;
 }
 
+type SortOrder = "newest" | "severity_desc" | "severity_asc";
+
+const SORTS: Array<{ label: string; value: SortOrder }> = [
+  { label: "Newest first", value: "newest" },
+  { label: "Severity: high → low", value: "severity_desc" },
+  { label: "Severity: low → high", value: "severity_asc" },
+];
+
+/** severity is a string enum, so it needs an explicit rank to order by —
+ * alphabetical would give critical/high/low/medium, which is meaningless. */
+const SEVERITY_RANK: Record<Severity, number> = {
+  low: 0,
+  medium: 1,
+  high: 2,
+  critical: 3,
+};
+
+/**
+ * Returns a sorted copy — never sorts `tickets` in place, since Array.sort
+ * mutates and React compares state by reference. Applied at render time
+ * rather than stored, so it can't drift out of sync with handleUpdated.
+ *
+ * Ties fall back to newest-first so the order stays stable and predictable
+ * within a severity band rather than depending on the backend's row order.
+ */
+function sortTickets(tickets: Ticket[], sort: SortOrder): Ticket[] {
+  const byNewest = (a: Ticket, b: Ticket) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
+  if (sort === "newest") return [...tickets].sort(byNewest);
+
+  const direction = sort === "severity_desc" ? -1 : 1;
+  return [...tickets].sort((a, b) => {
+    const delta = SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
+    return delta !== 0 ? delta * direction : byNewest(a, b);
+  });
+}
+
 export function TicketsPanel() {
   const [filter, setFilter] = useState<TicketFilter>("all");
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [sort, setSort] = useState<SortOrder>("newest");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Ticket | null>(null);
+
+  const visibleTickets = sortTickets(tickets, sort);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,7 +107,7 @@ export function TicketsPanel() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {FILTERS.map((f) => (
           <button
             key={f.value}
@@ -82,6 +123,19 @@ export function TicketsPanel() {
             {f.label}
           </button>
         ))}
+
+        <select
+          aria-label="Sort tickets"
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortOrder)}
+          className="ml-auto rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-sm font-medium text-slate-600 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+        >
+          {SORTS.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {error && (
@@ -100,7 +154,7 @@ export function TicketsPanel() {
 
       <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
         <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-          {tickets.map((ticket) => (
+          {visibleTickets.map((ticket) => (
             <li key={ticket.id}>
               <button
                 type="button"

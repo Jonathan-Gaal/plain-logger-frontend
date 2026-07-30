@@ -68,6 +68,70 @@ describe('TicketsPanel', () => {
     await waitFor(() => expect(screen.queryByText('PL-001')).not.toBeInTheDocument());
   });
 
+  // Fixture severities/dates (see setup.ts):
+  //   PL-001 medium  Jul 1   PL-002 critical Jul 2
+  //   PL-003 low     Jul 3   PL-004 high     Jul 4
+  function visibleOrder() {
+    return screen
+      .getAllByRole('listitem')
+      .map((li) => li.textContent?.match(/PL-\d+/)?.[0]);
+  }
+
+  it('defaults to newest first', async () => {
+    render(<TicketsPanel />);
+    await waitFor(() => expect(screen.getByText('PL-001')).toBeInTheDocument());
+
+    expect(screen.getByRole('combobox', { name: 'Sort tickets' })).toHaveValue('newest');
+    expect(visibleOrder()).toEqual(['PL-004', 'PL-003', 'PL-002', 'PL-001']);
+  });
+
+  it('sorts by severity high to low', async () => {
+    const user = userEvent.setup();
+    render(<TicketsPanel />);
+    await waitFor(() => expect(screen.getByText('PL-001')).toBeInTheDocument());
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Sort tickets' }),
+      'severity_desc'
+    );
+
+    // critical, high, medium, low
+    await waitFor(() =>
+      expect(visibleOrder()).toEqual(['PL-002', 'PL-004', 'PL-001', 'PL-003'])
+    );
+  });
+
+  it('sorts by severity low to high', async () => {
+    const user = userEvent.setup();
+    render(<TicketsPanel />);
+    await waitFor(() => expect(screen.getByText('PL-001')).toBeInTheDocument());
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Sort tickets' }),
+      'severity_asc'
+    );
+
+    await waitFor(() =>
+      expect(visibleOrder()).toEqual(['PL-003', 'PL-001', 'PL-004', 'PL-002'])
+    );
+  });
+
+  it('keeps the sort applied when the filter changes', async () => {
+    const user = userEvent.setup();
+    render(<TicketsPanel />);
+    await waitFor(() => expect(screen.getByText('PL-001')).toBeInTheDocument());
+
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Sort tickets' }),
+      'severity_desc'
+    );
+    await user.click(screen.getByRole('button', { name: 'Open' }));
+
+    // Only the open tickets remain, still ordered critical before medium.
+    await waitFor(() => expect(visibleOrder()).toEqual(['PL-002', 'PL-001']));
+    expect(screen.getByRole('combobox', { name: 'Sort tickets' })).toHaveValue('severity_desc');
+  });
+
   it('offers the catalog categories, not the retired fictional ones', async () => {
     const user = userEvent.setup();
     render(<TicketsPanel />);
