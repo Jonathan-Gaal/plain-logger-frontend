@@ -118,11 +118,16 @@ export function TicketDetailModal({
     setSavingEdit(true);
     setEditError(null);
     try {
-      await updateErrorTemplate(ticket.matched.id, {
+      const updated = await updateErrorTemplate(ticket.matched.id, {
         specialist_diagnostic: editSpecialistText.trim(),
       });
-      // Update local state to reflect the change
-      ticket.matched.specialistDiagnostic = editSpecialistText.trim();
+      // Push the server's authoritative value up to the parent rather than
+      // mutating the prop in place — otherwise the edit is silently lost the
+      // next time TicketsPanel re-renders this ticket from its own state.
+      onUpdated({
+        ...ticket,
+        matched: { ...ticket.matched, specialistDiagnostic: updated.specialistDiagnostic },
+      });
       setEditingSpecialistDiagnostic(false);
     } catch (err) {
       setEditError(err instanceof Error ? err.message : "Failed to update specialist diagnostic.");
@@ -139,11 +144,14 @@ export function TicketDetailModal({
     setSavingEdit(true);
     setEditError(null);
     try {
-      await updateErrorTemplate(ticket.matched.id, {
+      const updated = await updateErrorTemplate(ticket.matched.id, {
         employee_message: editEmployeeText.trim(),
       });
-      // Update local state to reflect the change
-      ticket.matched.employeeMessage = editEmployeeText.trim();
+      // See handleSaveSpecialistEdit — same reason for going through onUpdated.
+      onUpdated({
+        ...ticket,
+        matched: { ...ticket.matched, employeeMessage: updated.employeeMessage },
+      });
       setEditingEmployeeMessage(false);
     } catch (err) {
       setEditError(err instanceof Error ? err.message : "Failed to update employee message.");
@@ -235,6 +243,7 @@ export function TicketDetailModal({
                   {ticket.status === "resolved" && (
                     <button
                       type="button"
+                      aria-label="Edit specialist diagnostic"
                       onClick={() => {
                         setEditingSpecialistDiagnostic(!editingSpecialistDiagnostic);
                         setEditError(null);
@@ -289,6 +298,7 @@ export function TicketDetailModal({
                   {ticket.status === "resolved" && (
                     <button
                       type="button"
+                      aria-label="Edit employee message"
                       onClick={() => {
                         setEditingEmployeeMessage(!editingEmployeeMessage);
                         setEditError(null);

@@ -145,6 +145,29 @@ export const mockTickets = [
     resolvedAt: new Date().toISOString(),
     matched: null,
   },
+  // Resolved AND mapped — the only combination that exposes the
+  // edit-message affordances in TicketDetailModal.
+  {
+    id: 'ticket-4',
+    ticketNumber: 'PL-004',
+    submittedBy: 'test-user',
+    extractedCode: 'RESOLVED_MAPPED_CODE',
+    status: 'resolved',
+    severity: 'medium',
+    assignedSpecialist: 'specialist.test',
+    resolutionNote: 'Resolved and mapped',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    resolvedAt: new Date().toISOString(),
+    matched: {
+      id: 'template-test-4',
+      internalSystem: 'resolved-system',
+      specialistDiagnostic: 'Original diagnostic',
+      employeeMessage: 'Original employee message',
+      isSelfService: false,
+      selfServiceSteps: null,
+    },
+  },
 ];
 
 beforeAll(() => mockServer.listen());

@@ -66,21 +66,85 @@ describe('TicketsPanel', () => {
     await waitFor(() => expect(screen.queryByText('PL-001')).not.toBeInTheDocument());
   });
 
-  it('allows editing specialist diagnostic on a resolved ticket', async () => {
+  it('hides the edit affordances on a ticket that is not resolved', async () => {
     const user = userEvent.setup();
     render(<TicketsPanel />);
     await waitFor(() => expect(screen.getByText('PL-002')).toBeInTheDocument());
 
-    // PL-002 is a mapped, open ticket in the mock data (not resolved, but that's ok for testing the UI exists)
+    // PL-002 is mapped but still open, so the messages are read-only.
     await user.click(screen.getByText('PL-002'));
     await waitFor(() =>
       expect(screen.getByText('Specialist Diagnostic — test-system')).toBeInTheDocument()
     );
 
-    // For now, just verify the matched template cards are shown
-    // The edit functionality is only enabled on resolved tickets, but we can verify
-    // the structure is correct by checking the cards exist
-    expect(screen.getByText('Test diagnostic')).toBeInTheDocument();
-    expect(screen.getByText('Test message')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Edit specialist diagnostic' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Edit employee message' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('edits and saves the specialist diagnostic on a resolved ticket', async () => {
+    const user = userEvent.setup();
+    render(<TicketsPanel />);
+    await waitFor(() => expect(screen.getByText('PL-004')).toBeInTheDocument());
+
+    await user.click(screen.getByText('PL-004'));
+    await waitFor(() => expect(screen.getByText('Original diagnostic')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: 'Edit specialist diagnostic' }));
+
+    // The textarea should open pre-filled with the current text.
+    const textarea = screen.getByDisplayValue('Original diagnostic');
+    await user.clear(textarea);
+    await user.type(textarea, 'Revised after resolution');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('Revised after resolution')).toBeInTheDocument()
+    );
+    expect(screen.queryByText('Original diagnostic')).not.toBeInTheDocument();
+  });
+
+  it('edits and saves the employee message on a resolved ticket', async () => {
+    const user = userEvent.setup();
+    render(<TicketsPanel />);
+    await waitFor(() => expect(screen.getByText('PL-004')).toBeInTheDocument());
+
+    await user.click(screen.getByText('PL-004'));
+    await waitFor(() => expect(screen.getByText('Original employee message')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: 'Edit employee message' }));
+
+    const textarea = screen.getByDisplayValue('Original employee message');
+    await user.clear(textarea);
+    await user.type(textarea, 'Clearer wording for the employee');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('Clearer wording for the employee')).toBeInTheDocument()
+    );
+  });
+
+  it('discards an in-progress edit when Cancel is clicked', async () => {
+    const user = userEvent.setup();
+    render(<TicketsPanel />);
+    await waitFor(() => expect(screen.getByText('PL-004')).toBeInTheDocument());
+
+    await user.click(screen.getByText('PL-004'));
+    await waitFor(() => expect(screen.getByText('Original diagnostic')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: 'Edit specialist diagnostic' }));
+    const textarea = screen.getByDisplayValue('Original diagnostic');
+    await user.clear(textarea);
+    await user.type(textarea, 'This should never be saved');
+
+    // The edit panel's own Cancel, not the modal footer's.
+    const cancelButtons = screen.getAllByRole('button', { name: 'Cancel' });
+    await user.click(cancelButtons[0]);
+
+    await waitFor(() => expect(screen.getByText('Original diagnostic')).toBeInTheDocument());
+    expect(screen.queryByText('This should never be saved')).not.toBeInTheDocument();
   });
 });

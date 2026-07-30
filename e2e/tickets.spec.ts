@@ -110,4 +110,91 @@ test.describe('Tickets Flow', () => {
     await ticketButtons.first().click();
     await expect(page.locator('text=Specialist Diagnostic —')).toBeVisible();
   });
+
+  // --- Editing template messages on resolved tickets ---
+  //
+  // The edit affordances are deliberately gated on status === 'resolved',
+  // so these open a resolved ticket rather than just any mapped one.
+
+  test('does not offer message editing on a ticket that is still open', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('button:has-text("Tickets")').click();
+    await page.waitForSelector('text=PL-');
+
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.waitForTimeout(300);
+
+    const ticketButtons = page.locator('ul > li > button');
+    if ((await ticketButtons.count()) === 0) test.skip();
+
+    await ticketButtons.first().click();
+    await page.waitForSelector('text=Submitted by');
+
+    await expect(
+      page.getByRole('button', { name: 'Edit specialist diagnostic' })
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Edit employee message' })
+    ).toHaveCount(0);
+  });
+
+  test('offers message editing on a resolved, mapped ticket', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('button:has-text("Tickets")').click();
+    await page.waitForSelector('text=PL-');
+
+    await page.getByRole('button', { name: 'Resolved', exact: true }).click();
+    await page.waitForTimeout(300);
+
+    const ticketButtons = page.locator('ul > li > button');
+    if ((await ticketButtons.count()) === 0) test.skip();
+
+    await ticketButtons.first().click();
+    await expect(page.locator('text=Specialist Diagnostic —')).toBeVisible();
+
+    await expect(
+      page.getByRole('button', { name: 'Edit specialist diagnostic' })
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Edit employee message' })
+    ).toBeVisible();
+  });
+
+  test('cancelling an edit leaves the original message untouched', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('button:has-text("Tickets")').click();
+    await page.waitForSelector('text=PL-');
+
+    await page.getByRole('button', { name: 'Resolved', exact: true }).click();
+    await page.waitForTimeout(300);
+
+    const ticketButtons = page.locator('ul > li > button');
+    if ((await ticketButtons.count()) === 0) test.skip();
+    await ticketButtons.first().click();
+    await expect(page.locator('text=Specialist Diagnostic —')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Edit specialist diagnostic' }).click();
+    const textarea = page.locator('textarea').first();
+    const original = await textarea.inputValue();
+
+    await textarea.fill('THIS EDIT SHOULD BE DISCARDED');
+    // The edit panel's own Cancel is the first one; the modal footer has another.
+    await page.getByRole('button', { name: 'Cancel', exact: true }).first().click();
+
+    await expect(page.locator('text=THIS EDIT SHOULD BE DISCARDED')).toHaveCount(0);
+    await expect(page.getByText(original, { exact: true }).first()).toBeVisible();
+  });
+
+  // NOTE: there is deliberately no E2E test that actually *saves* a message
+  // edit. Doing so mutates error_templates text that is shared by every
+  // ticket using that error code, there is no DELETE/unlink endpoint to undo
+  // it, and there is no POST /api/tickets to build an isolated throwaway
+  // fixture to mutate instead. An earlier version of this file did attempt a
+  // save-then-restore round trip; it timed out under parallel workers partway
+  // through and left junk text permanently in a seeded template.
+  //
+  // The save path is covered where it can be cleaned up properly:
+  //   - backend  tests/error-templates.test.ts  (real HTTP + real DB, against
+  //              templates the suite creates itself)
+  //   - frontend TicketsPanel.test.tsx          (full UI flow against MSW)
 });
