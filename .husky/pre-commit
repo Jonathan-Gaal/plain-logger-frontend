@@ -1,0 +1,6 @@
+# Pre-commit gate (fast, no servers): type-check + unit/component tests.
+echo "[pre-commit] typecheck…"
+npm run typecheck || exit 1
+echo "[pre-commit] unit tests…"
+npm run test:unit || exit 1
+echo "[pre-commit] ✅ passed"

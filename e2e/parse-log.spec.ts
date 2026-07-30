@@ -4,9 +4,10 @@ test.describe('Parse Log Flow', () => {
   test('should parse valid JSON and display results', async ({ page }) => {
     await page.goto('/');
 
-    // Find textarea and enter valid JSON
+    // Find textarea and enter valid JSON. Uses a real seeded BGL error code
+    // (node.temperature) so the backend returns a "matched" result.
     const textarea = page.locator('textarea');
-    await textarea.fill('{"error_code": "AUTHSVC_TOKEN_EXPIRED", "timestamp": "2026-07-22T10:00:00Z"}');
+    await textarea.fill('{"error_code": "node.temperature", "node": "node-104", "message": "ambient=28"}');
 
     // Check character counter updated
     expect(page.locator('text=/\\d+ \\/ 20,000 characters/')).toBeTruthy();
@@ -27,7 +28,7 @@ test.describe('Parse Log Flow', () => {
     await page.goto('/');
 
     const textarea = page.locator('textarea');
-    await textarea.fill('{"error_code": "AUTHSVC_TOKEN_EXPIRED",'); // Invalid JSON
+    await textarea.fill('{"error_code": "node.temperature",'); // Invalid JSON
 
     const parseButton = page.locator('button:has-text("Parse Log")').nth(1);
     await parseButton.click();

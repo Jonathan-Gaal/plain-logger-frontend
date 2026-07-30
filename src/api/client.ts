@@ -1,8 +1,10 @@
 import type {
+  ErrorTemplate,
   HistoryEntry,
   ParseLogResponse,
   Ticket,
   TicketStatus,
+  UpdateErrorTemplateRequest,
   UpdateTicketRequest,
 } from "../types";
 
@@ -95,6 +97,20 @@ export async function createErrorTemplate(
     throw new ApiError(data?.message ?? "Failed to create error template.");
   }
   return data;
+}
+
+export async function updateErrorTemplate(
+  id: string,
+  updates: UpdateErrorTemplateRequest
+): Promise<ErrorTemplate> {
+  const data = await request<{ status: string; template: ErrorTemplate; message?: string }>(
+    `/api/error-templates/${id}`,
+    { method: "PATCH", body: JSON.stringify(updates) }
+  );
+  if (data.status !== "ok") {
+    throw new ApiError(data.message ?? "Failed to update error template.");
+  }
+  return data.template;
 }
 
 export { ApiError };

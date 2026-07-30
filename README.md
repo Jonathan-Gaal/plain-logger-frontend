@@ -30,3 +30,38 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+## Testing
+
+This is the UI for **Plain Logger** and talks to the separate
+`plain-logger-backend` API (expected at `../plain-logger-backend`).
+
+- **Unit / component tests** (Vitest + Testing Library, mocked API — no
+  servers needed):
+
+  ```bash
+  npm run test:unit
+  ```
+
+- **End-to-end tests** (Playwright) drive the real UI against a **real,
+  seeded backend** — not mocks — so they exercise actual ticket data and the
+  parse-log flow.
+
+- **One command, zero setup** — seeds a throwaway backend DB, boots both the
+  backend and frontend, runs unit + e2e, and tears everything down:
+
+  ```bash
+  npm run test:all
+  ```
+
+### Git hooks (tests must pass before commit/push)
+
+[Husky](https://typicode.github.io/husky) hooks gate commits and pushes:
+
+- **pre-commit** → `npm run typecheck && npm run test:unit` (fast).
+- **pre-push** → `npm run test:all` (unit + full Playwright e2e against a live
+  backend; blocks the push on any failure).
+
+Hooks install automatically via the `prepare` script on `npm install`. If you
+cloned before they existed, run `npm install` once. Emergency bypass (not
+recommended): `git push --no-verify`.

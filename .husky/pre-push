@@ -1,0 +1,5 @@
+# Pre-push gate (full end-to-end): unit tests, then boots the seeded backend
+# + frontend and runs Playwright e2e. Blocks the push if anything fails.
+echo "[pre-push] running full frontend test suite incl. e2e (boots servers; ~60-90s)…"
+npm run test:all || exit 1
+echo "[pre-push] ✅ all tests passed — pushing."

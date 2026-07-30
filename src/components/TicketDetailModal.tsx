@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { X } from "lucide-react";
-import { parseLog, updateTicket, createErrorTemplate, type CreateErrorTemplateRequest } from "../api/client";
+import { X, Edit2 } from "lucide-react";
+import { parseLog, updateTicket, createErrorTemplate, updateErrorTemplate, type CreateErrorTemplateRequest } from "../api/client";
 import type { ParseLogResponse, Ticket, TicketStatus } from "../types";
 import { SeverityBadge } from "./SeverityBadge";
 import { StatusBadge } from "./StatusBadge";
@@ -39,6 +39,12 @@ export function TicketDetailModal({
     employee_message: "",
   });
   const [creatingTemplate, setCreatingTemplate] = useState(false);
+  const [editingSpecialistDiagnostic, setEditingSpecialistDiagnostic] = useState(false);
+  const [editingEmployeeMessage, setEditingEmployeeMessage] = useState(false);
+  const [editSpecialistText, setEditSpecialistText] = useState(ticket.matched?.specialistDiagnostic ?? "");
+  const [editEmployeeText, setEditEmployeeText] = useState(ticket.matched?.employeeMessage ?? "");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const needsResolutionNote = status === "resolved";
   const payloadJson = ticket.extractedCode
@@ -101,6 +107,48 @@ export function TicketDetailModal({
       setError(err instanceof Error ? err.message : "Failed to update ticket.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleSaveSpecialistEdit() {
+    if (!ticket.matched || !editSpecialistText.trim()) {
+      setEditError("Specialist diagnostic cannot be empty.");
+      return;
+    }
+    setSavingEdit(true);
+    setEditError(null);
+    try {
+      await updateErrorTemplate(ticket.matched.id, {
+        specialist_diagnostic: editSpecialistText.trim(),
+      });
+      // Update local state to reflect the change
+      ticket.matched.specialistDiagnostic = editSpecialistText.trim();
+      setEditingSpecialistDiagnostic(false);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "Failed to update specialist diagnostic.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function handleSaveEmployeeEdit() {
+    if (!ticket.matched || !editEmployeeText.trim()) {
+      setEditError("Employee message cannot be empty.");
+      return;
+    }
+    setSavingEdit(true);
+    setEditError(null);
+    try {
+      await updateErrorTemplate(ticket.matched.id, {
+        employee_message: editEmployeeText.trim(),
+      });
+      // Update local state to reflect the change
+      ticket.matched.employeeMessage = editEmployeeText.trim();
+      setEditingEmployeeMessage(false);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "Failed to update employee message.");
+    } finally {
+      setSavingEdit(false);
     }
   }
 
@@ -180,26 +228,121 @@ export function TicketDetailModal({
           {ticket.matched ? (
             <div className="space-y-3">
               <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/20">
-                <p className="mb-1 text-xs font-semibold text-amber-800 dark:text-amber-300">
-                  Specialist Diagnostic — {ticket.matched.internalSystem}
-                </p>
-                <p className="text-sm text-slate-700 dark:text-slate-300">
-                  {ticket.matched.specialistDiagnostic}
-                </p>
-              </div>
-              <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/20">
-                <p className="mb-1 text-xs font-semibold text-blue-800 dark:text-blue-300">
-                  Employee Message
-                </p>
-                <p className="text-sm text-slate-700 dark:text-slate-300">
-                  {ticket.matched.employeeMessage}
-                </p>
-                {ticket.matched.isSelfService && ticket.matched.selfServiceSteps && (
-                  <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
-                    <span className="font-medium">Steps:</span> {ticket.matched.selfServiceSteps}
+                <div className="mb-1 flex items-start justify-between">
+                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                    Specialist Diagnostic — {ticket.matched.internalSystem}
                   </p>
+                  {ticket.status === "resolved" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingSpecialistDiagnostic(!editingSpecialistDiagnostic);
+                        setEditError(null);
+                      }}
+                      className="rounded-md p-1 text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                  )}
+                </div>
+                {!editingSpecialistDiagnostic ? (
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    {ticket.matched.specialistDiagnostic}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editSpecialistText}
+                      onChange={(e) => setEditSpecialistText(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-md border border-amber-300 px-2.5 py-1.5 text-xs dark:border-amber-700 dark:bg-slate-800"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSaveSpecialistEdit}
+                        disabled={savingEdit}
+                        className="flex-1 rounded-md bg-amber-600 px-2 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-40 dark:bg-amber-700 dark:hover:bg-amber-600"
+                      >
+                        {savingEdit ? "Saving…" : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingSpecialistDiagnostic(false);
+                          setEditSpecialistText(ticket.matched?.specialistDiagnostic ?? "");
+                          setEditError(null);
+                        }}
+                        className="flex-1 rounded-md border border-amber-300 px-2 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
+              <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/20">
+                <div className="mb-1 flex items-start justify-between">
+                  <p className="text-xs font-semibold text-blue-800 dark:text-blue-300">
+                    Employee Message
+                  </p>
+                  {ticket.status === "resolved" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingEmployeeMessage(!editingEmployeeMessage);
+                        setEditError(null);
+                      }}
+                      className="rounded-md p-1 text-blue-700 hover:bg-blue-100 dark:text-blue-300 dark:hover:bg-blue-900/30"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                  )}
+                </div>
+                {!editingEmployeeMessage ? (
+                  <>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                      {ticket.matched.employeeMessage}
+                    </p>
+                    {ticket.matched.isSelfService && ticket.matched.selfServiceSteps && (
+                      <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
+                        <span className="font-medium">Steps:</span> {ticket.matched.selfServiceSteps}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editEmployeeText}
+                      onChange={(e) => setEditEmployeeText(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-md border border-blue-300 px-2.5 py-1.5 text-xs dark:border-blue-700 dark:bg-slate-800"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSaveEmployeeEdit}
+                        disabled={savingEdit}
+                        className="flex-1 rounded-md bg-blue-600 px-2 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-40 dark:bg-blue-700 dark:hover:bg-blue-600"
+                      >
+                        {savingEdit ? "Saving…" : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingEmployeeMessage(false);
+                          setEditEmployeeText(ticket.matched?.employeeMessage ?? "");
+                          setEditError(null);
+                        }}
+                        className="flex-1 rounded-md border border-blue-300 px-2 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/30"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {editError && <p className="text-xs text-red-600 dark:text-red-400">{editError}</p>}
             </div>
           ) : (
             <div className="space-y-3">
@@ -225,7 +368,7 @@ export function TicketDetailModal({
                   />
                   <input
                     type="text"
-                    placeholder="Internal system (e.g. auth-service)"
+                    placeholder="Internal system (e.g. interconnect)"
                     value={templateForm.internal_system || ""}
                     onChange={(e) => setTemplateForm({ ...templateForm, internal_system: e.target.value })}
                     className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs dark:border-slate-600 dark:bg-slate-800"

@@ -9,9 +9,14 @@ afterEach(() => {
   cleanup();
 });
 
-// Mock server for API tests
+// Mock server for API tests.
+//
+// Handlers use a wildcard host (`*/api/...`) rather than a hardcoded
+// `http://localhost:3000` so they match regardless of what VITE_API_BASE_URL
+// is set to in the environment. This keeps the mocked unit tests robust even
+// if a base-URL override leaks in (e.g. from the test:all runner's e2e phase).
 export const mockServer = setupServer(
-  http.post('http://localhost:3000/api/parse-log', () => {
+  http.post('*/api/parse-log', () => {
     return HttpResponse.json({
       status: 'matched',
       errorCode: 'TEST_ERROR',
@@ -25,7 +30,7 @@ export const mockServer = setupServer(
       historyId: 'test-history-id',
     });
   }),
-  http.get('http://localhost:3000/api/history', () => {
+  http.get('*/api/history', () => {
     return HttpResponse.json({
       status: 'ok',
       history: [
@@ -56,6 +61,7 @@ export const mockServer = setupServer(
         response.ticket = {
           ...ticket,
           matched: {
+            id: 'new-template-id',
             internalSystem: body.internal_system,
             specialistDiagnostic: 'Newly created diagnostic',
             employeeMessage: 'Newly created employee message',
@@ -66,6 +72,26 @@ export const mockServer = setupServer(
       }
     }
     return HttpResponse.json(response, { status: 201 });
+  }),
+  http.patch('http://localhost:3000/api/error-templates/:id', async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json(
+      {
+        status: 'ok',
+        template: {
+          errorCode: 'TEST_ERROR',
+          internalSystem: 'test-system',
+          specialistDiagnostic:
+            (body.specialist_diagnostic as string | undefined) || 'Test diagnostic',
+          employeeMessage:
+            (body.employee_message as string | undefined) || 'Test message',
+          isSelfService: false,
+          selfServiceSteps: null,
+          escalateToDev: false,
+        },
+      },
+      { status: 200 }
+    );
   })
 );
 
@@ -97,6 +123,7 @@ export const mockTickets = [
     updatedAt: new Date().toISOString(),
     resolvedAt: null,
     matched: {
+      id: 'template-test-1',
       internalSystem: 'test-system',
       specialistDiagnostic: 'Test diagnostic',
       employeeMessage: 'Test message',

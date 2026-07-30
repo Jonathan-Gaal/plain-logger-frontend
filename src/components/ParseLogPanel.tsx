@@ -42,7 +42,7 @@ export function ParseLogPanel({ onParsed }: { onParsed?: () => void }) {
           id="log-payload"
           value={payload}
           onChange={(e) => setPayload(e.target.value)}
-          placeholder='{"error_code": "AUTHSVC_TOKEN_EXPIRED", "timestamp": "..."}'
+          placeholder='{"error_code": "switch_module.fan", "node": "Interconnect-0N00", "message": "..."}'
           rows={8}
           className="w-full resize-y rounded-md border border-slate-300 bg-slate-50 p-3 font-mono text-sm text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-blue-900/40"
         />

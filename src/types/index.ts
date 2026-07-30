@@ -50,6 +50,7 @@ export interface HistoryEntry {
 }
 
 export interface TicketMatchedTemplate {
+  id: string;
   internalSystem: string;
   specialistDiagnostic: string;
   employeeMessage: string;
@@ -76,4 +77,19 @@ export interface UpdateTicketRequest {
   status?: TicketStatus;
   assignedSpecialist?: string | null;
   resolutionNote?: string;
+}
+
+export interface ErrorTemplate {
+  errorCode: string;
+  internalSystem: string;
+  specialistDiagnostic: string;
+  employeeMessage: string;
+  isSelfService: boolean;
+  selfServiceSteps: string | null;
+  escalateToDev: boolean;
+}
+
+export interface UpdateErrorTemplateRequest {
+  specialist_diagnostic?: string;
+  employee_message?: string;
 }
