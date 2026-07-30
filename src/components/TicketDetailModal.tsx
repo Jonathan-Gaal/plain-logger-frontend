@@ -12,6 +12,23 @@ import { formatTimestamp } from "../lib/utils";
 
 const STATUS_OPTIONS: TicketStatus[] = ["open", "in_progress", "resolved"];
 
+// The categories actually used by error_templates in this dataset, ordered
+// by how common they are. These are BGL/RAS domains — an earlier version of
+// this dropdown offered auth/timeout/queue/db/config, which are leftovers
+// from the original fictional seed set and match nothing in the catalog, so
+// every template created here was filed under a category no other row used.
+// Keep in sync with scripts/generate-templates.js in the backend repo.
+const CATEGORY_OPTIONS = [
+  { value: "command", label: "Command" },
+  { value: "hardware", label: "Hardware" },
+  { value: "thermal", label: "Thermal" },
+  { value: "network", label: "Network" },
+  { value: "filesystem", label: "Filesystem" },
+  { value: "node", label: "Node" },
+  { value: "partition", label: "Partition" },
+  { value: "domain", label: "Domain" },
+];
+
 export function TicketDetailModal({
   ticket,
   onClose,
@@ -33,7 +50,7 @@ export function TicketDetailModal({
   const [templateForm, setTemplateForm] = useState<Partial<CreateErrorTemplateRequest>>({
     error_code: ticket.extractedCode ?? "",
     internal_system: "",
-    category: "config",
+    category: "",
     severity: "medium",
     specialist_diagnostic: "",
     employee_message: "",
@@ -67,8 +84,14 @@ export function TicketDetailModal({
 
   async function handleCreateTemplate() {
     const form = templateForm as CreateErrorTemplateRequest;
-    if (!form.error_code || !form.internal_system || !form.specialist_diagnostic || !form.employee_message) {
-      setError("All fields except self_service_steps are required.");
+    if (
+      !form.error_code ||
+      !form.internal_system ||
+      !form.category ||
+      !form.specialist_diagnostic ||
+      !form.employee_message
+    ) {
+      setError("All fields except self-service steps are required.");
       return;
     }
     setCreatingTemplate(true);
@@ -384,17 +407,20 @@ export function TicketDetailModal({
                     className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs dark:border-slate-600 dark:bg-slate-800"
                   />
                   <select
-                    value={templateForm.category || "config"}
+                    aria-label="Category"
+                    value={templateForm.category ?? ""}
                     onChange={(e) => setTemplateForm({ ...templateForm, category: e.target.value })}
                     className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs dark:border-slate-600 dark:bg-slate-800"
                   >
-                    <option value="auth">Auth</option>
-                    <option value="timeout">Timeout</option>
-                    <option value="queue">Queue</option>
-                    <option value="db">Database</option>
-                    <option value="config">Config</option>
+                    <option value="">Select a category…</option>
+                    {CATEGORY_OPTIONS.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
                   </select>
                   <select
+                    aria-label="Severity"
                     value={templateForm.severity || "medium"}
                     onChange={(e) => setTemplateForm({ ...templateForm, severity: e.target.value as any })}
                     className="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-xs dark:border-slate-600 dark:bg-slate-800"

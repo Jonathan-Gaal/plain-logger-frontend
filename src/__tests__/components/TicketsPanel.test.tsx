@@ -50,6 +50,8 @@ describe('TicketsPanel', () => {
     await user.click(screen.getByText('Add error code to database'));
 
     await user.type(screen.getByPlaceholderText('Internal system (e.g. interconnect)'), 'test-system');
+    // Category has no default — a real category must be chosen explicitly.
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Category' }), 'node');
     await user.type(screen.getByPlaceholderText('Specialist diagnostic'), 'diagnostic text');
     await user.type(screen.getByPlaceholderText('Employee message'), 'employee message text');
 
@@ -64,6 +66,58 @@ describe('TicketsPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => expect(screen.queryByText('PL-001')).not.toBeInTheDocument());
+  });
+
+  it('offers the catalog categories, not the retired fictional ones', async () => {
+    const user = userEvent.setup();
+    render(<TicketsPanel />);
+    await waitFor(() => expect(screen.getByText('PL-001')).toBeInTheDocument());
+
+    await user.click(screen.getByText('PL-001'));
+    await waitFor(() => expect(screen.getByText('Add error code to database')).toBeInTheDocument());
+    await user.click(screen.getByText('Add error code to database'));
+
+    const category = screen.getByRole('combobox', { name: 'Category' });
+    const values = Array.from(category.querySelectorAll('option')).map((o) => o.value);
+
+    // Real categories, taken from error_templates in the seeded catalog.
+    expect(values).toEqual(
+      expect.arrayContaining(['command', 'hardware', 'thermal', 'network', 'filesystem', 'node'])
+    );
+    // Leftovers from the original fictional seed set — none of these exist
+    // in the catalog, so offering them silently mislabelled every template.
+    expect(values).not.toContain('auth');
+    expect(values).not.toContain('timeout');
+    expect(values).not.toContain('queue');
+    expect(values).not.toContain('db');
+    expect(values).not.toContain('config');
+
+    // No pre-selected value, so a category can't be submitted by accident.
+    expect((category as HTMLSelectElement).value).toBe('');
+  });
+
+  it('blocks template creation until a category is chosen', async () => {
+    const user = userEvent.setup();
+    render(<TicketsPanel />);
+    await waitFor(() => expect(screen.getByText('PL-001')).toBeInTheDocument());
+
+    await user.click(screen.getByText('PL-001'));
+    await waitFor(() => expect(screen.getByText('Add error code to database')).toBeInTheDocument());
+    await user.click(screen.getByText('Add error code to database'));
+
+    // Everything filled except the category.
+    await user.type(screen.getByPlaceholderText('Internal system (e.g. interconnect)'), 'test-system');
+    await user.type(screen.getByPlaceholderText('Specialist diagnostic'), 'diagnostic text');
+    await user.type(screen.getByPlaceholderText('Employee message'), 'employee message text');
+    await user.click(screen.getByText('Create template & parse'));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('All fields except self-service steps are required.')
+      ).toBeInTheDocument()
+    );
+    // Still on the form, not switched over to a matched card.
+    expect(screen.getByText('Create template & parse')).toBeInTheDocument();
   });
 
   it('hides the edit affordances on a ticket that is not resolved', async () => {
