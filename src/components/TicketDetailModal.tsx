@@ -69,6 +69,16 @@ export function TicketDetailModal({
     ? JSON.stringify({ error_code: ticket.extractedCode }, null, 2)
     : null;
 
+  // error_code is prefilled from the ticket, so it does not count as input —
+  // anything else means the specialist has begun filling the template form.
+  const hasStartedTemplate = Boolean(
+    templateForm.internal_system ||
+      templateForm.category ||
+      templateForm.specialist_diagnostic ||
+      templateForm.employee_message ||
+      templateForm.self_service_steps
+  );
+
   async function handleReparse() {
     if (!payloadJson) return;
     setParsing(true);
@@ -122,6 +132,16 @@ export function TicketDetailModal({
   }
 
   async function handleSave() {
+    // "Save changes" only submits the ticket's own fields — it does not create
+    // the error template. Closing here would silently discard a half-filled
+    // create-template form and leave the ticket unmapped, which reads as "I
+    // mapped it and it stayed in Unmapped". Stop and say which button to use.
+    if (showCreateTemplate && hasStartedTemplate) {
+      setError(
+        'You have not saved the new error code yet — click "Create template & parse" to add it, or Cancel that form first. "Save changes" only updates this ticket.'
+      );
+      return;
+    }
     if (needsResolutionNote && resolutionNote.trim().length === 0) {
       setError("A resolution note is required when marking a ticket resolved.");
       return;

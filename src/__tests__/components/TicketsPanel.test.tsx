@@ -126,6 +126,56 @@ describe('TicketsPanel', () => {
     expect(form).toContainElement(alert);
   });
 
+  it('refuses to close via "Save changes" while a filled template form is open', async () => {
+    const user = userEvent.setup();
+    render(<TicketsPanel />);
+    await waitFor(() => expect(screen.getByText('PL-001')).toBeInTheDocument());
+
+    await user.click(screen.getByText('PL-001'));
+    await waitFor(() => expect(screen.getByText('Add error code to database')).toBeInTheDocument());
+    await user.click(screen.getByText('Add error code to database'));
+
+    // Fill the template form completely...
+    await user.type(screen.getByPlaceholderText('Internal system (e.g. interconnect)'), 'control-system');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Category' }), 'network');
+    await user.type(screen.getByPlaceholderText('Specialist diagnostic'), 'diagnostic text');
+    await user.type(screen.getByPlaceholderText('Employee message'), 'employee message text');
+
+    // ...then reach for the modal's footer button instead of the form's own.
+    // That path only ever submitted the ticket's fields and closed, throwing
+    // the typed-in template away and leaving the ticket unmapped.
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/have not saved the new error code yet/i)
+      ).toBeInTheDocument()
+    );
+
+    // Modal stays open with the form and its content intact, rather than
+    // closing as though the mapping had been saved.
+    expect(screen.getByText('Create template & parse')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('control-system')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('diagnostic text')).toBeInTheDocument();
+  });
+
+  it('still allows "Save changes" when the template form was never touched', async () => {
+    const user = userEvent.setup();
+    render(<TicketsPanel />);
+    await waitFor(() => expect(screen.getByText('PL-001')).toBeInTheDocument());
+
+    await user.click(screen.getByText('PL-001'));
+    await waitFor(() => expect(screen.getByText('Add error code to database')).toBeInTheDocument());
+
+    // Open the form but type nothing — the guard must not fire.
+    await user.click(screen.getByText('Add error code to database'));
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() =>
+      expect(screen.queryByText(/have not saved the new error code yet/i)).not.toBeInTheDocument()
+    );
+  });
+
   it('hides the edit affordances on a ticket that is not resolved', async () => {
     const user = userEvent.setup();
     render(<TicketsPanel />);
