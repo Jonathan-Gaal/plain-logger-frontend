@@ -50,14 +50,14 @@ test.describe('Tickets Flow', () => {
     await page.locator('button:has-text("Tickets")').click();
 
     await page.waitForSelector('text=PL-');
-    const firstTicketText = await page.locator('button:has-text("PL-")').first().textContent();
 
     // Click ticket
     await page.locator('button:has-text("PL-")').first().click();
     await page.waitForSelector('text=Status');
 
-    // Change status
-    await page.locator('select').selectOption('in_progress');
+    // Target the status select by name — a bare locator('select') also matches
+    // the list's sort control now that one exists.
+    await page.getByLabel('Ticket status').selectOption('in_progress');
     await page.locator('button:has-text("Save changes")').click();
 
     // Modal should close, ticket should be gone from current view if filters are active
@@ -109,6 +109,58 @@ test.describe('Tickets Flow', () => {
 
     await ticketButtons.first().click();
     await expect(page.locator('text=Specialist Diagnostic —')).toBeVisible();
+  });
+
+  test('sorts the list by severity in both directions', async ({ page }) => {
+    const RANK: Record<string, number> = { low: 0, medium: 1, high: 2, critical: 3 };
+
+    async function severities() {
+      const rows = await page.locator('ul > li > button').allTextContents();
+      return rows
+        .map((t) => t.toLowerCase().match(/critical|high|medium|low/)?.[0])
+        .filter((s): s is string => Boolean(s));
+    }
+
+    await page.goto('/');
+    await page.locator('button:has-text("Tickets")').click();
+    await page.waitForSelector('text=PL-');
+
+    const sort = page.getByLabel('Sort tickets');
+    await expect(sort).toHaveValue('newest');
+
+    await sort.selectOption('severity_desc');
+    await page.waitForTimeout(400);
+    const desc = await severities();
+    expect(desc.length).toBeGreaterThan(1);
+    expect(desc.every((s, i) => i === 0 || RANK[desc[i - 1]] >= RANK[s])).toBe(true);
+
+    await sort.selectOption('severity_asc');
+    await page.waitForTimeout(400);
+    const asc = await severities();
+    expect(asc.every((s, i) => i === 0 || RANK[asc[i - 1]] <= RANK[s])).toBe(true);
+
+    // Same tickets either way — sorting must not drop or duplicate rows.
+    expect(asc.length).toBe(desc.length);
+  });
+
+  test('keeps the chosen sort when the filter changes', async ({ page }) => {
+    const RANK: Record<string, number> = { low: 0, medium: 1, high: 2, critical: 3 };
+
+    await page.goto('/');
+    await page.locator('button:has-text("Tickets")').click();
+    await page.waitForSelector('text=PL-');
+
+    await page.getByLabel('Sort tickets').selectOption('severity_desc');
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await page.waitForTimeout(500);
+
+    await expect(page.getByLabel('Sort tickets')).toHaveValue('severity_desc');
+
+    const rows = await page.locator('ul > li > button').allTextContents();
+    const sev = rows
+      .map((t) => t.toLowerCase().match(/critical|high|medium|low/)?.[0])
+      .filter((s): s is string => Boolean(s));
+    expect(sev.every((s, i) => i === 0 || RANK[sev[i - 1]] >= RANK[s])).toBe(true);
   });
 
   // --- Editing template messages on resolved tickets ---

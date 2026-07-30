@@ -521,6 +521,7 @@ export function TicketDetailModal({
                 Status
               </label>
               <select
+                aria-label="Ticket status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TicketStatus)}
                 className="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
