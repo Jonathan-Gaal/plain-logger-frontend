@@ -52,6 +52,26 @@ test.describe('Parse Log Flow', () => {
     expect(await parseButton.isDisabled()).toBe(false);
   });
 
+  test('should match a code buried in a wrapped payload and name its path', async ({ page }) => {
+    await page.goto('/');
+
+    // A Winston-style envelope: the seeded code is two levels down, which
+    // only resolves because extraction walks nested objects.
+    const textarea = page.locator('textarea');
+    await textarea.fill(
+      '{"level": "error", "logger": "fulfillment-api", "meta": {"error": {"error_code": "node.temperature"}}}'
+    );
+
+    const parseButton = page.locator('button:has-text("Parse Log")').nth(1);
+    await parseButton.click();
+
+    await page.waitForSelector('text=Specialist Diagnostic');
+
+    const note = page.getByTestId('code-path-note');
+    await expect(note).toContainText('meta.error.error_code');
+    await expect(note).toContainText('nested inside the pasted payload');
+  });
+
   test('should show unmapped result', async ({ page }) => {
     await page.goto('/');
 

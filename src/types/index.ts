@@ -5,6 +5,12 @@ export type MatchStatus = "matched" | "unmapped" | "invalid_payload";
 export interface ParseLogMatchedResponse {
   status: "matched";
   errorCode: string;
+  /**
+   * Path in the pasted payload the code was read from — `error_code` for a
+   * top-level hit, `meta.error.error_code` for a wrapped one. Optional so a
+   * response from an older backend build still type-checks.
+   */
+  codePath?: string | null;
   internalSystem: string;
   severity: Severity;
   isSelfService: boolean;
@@ -18,6 +24,8 @@ export interface ParseLogMatchedResponse {
 export interface ParseLogUnmappedResponse {
   status: "unmapped";
   errorCode: string | null;
+  /** See ParseLogMatchedResponse.codePath. */
+  codePath?: string | null;
   specialistDiagnostic: null;
   employeeMessage: null;
   historyId: string;

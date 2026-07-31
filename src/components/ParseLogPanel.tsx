@@ -4,6 +4,7 @@ import type { ParseLogResponse } from "../types";
 import { SpecialistCard } from "./SpecialistCard";
 import { EmployeeCard } from "./EmployeeCard";
 import { UnmappedCard } from "./UnmappedCard";
+import { CodePathNote } from "./CodePathNote";
 import { cn } from "../lib/utils";
 
 const MAX_CHARS = 20000;
@@ -80,15 +81,23 @@ export function ParseLogPanel({ onParsed }: { onParsed?: () => void }) {
 function ParseLogResult({ result }: { result: ParseLogResponse }) {
   if (result.status === "matched") {
     return (
-      <div className="grid gap-4 md:grid-cols-2">
-        <SpecialistCard result={result} />
-        <EmployeeCard result={result} />
+      <div className="flex flex-col gap-2">
+        <CodePathNote codePath={result.codePath ?? null} />
+        <div className="grid gap-4 md:grid-cols-2">
+          <SpecialistCard result={result} />
+          <EmployeeCard result={result} />
+        </div>
       </div>
     );
   }
 
   if (result.status === "unmapped") {
-    return <UnmappedCard errorCode={result.errorCode} />;
+    return (
+      <div className="flex flex-col gap-2">
+        <CodePathNote codePath={result.codePath ?? null} />
+        <UnmappedCard errorCode={result.errorCode} />
+      </div>
+    );
   }
 
   if (result.status === "invalid_payload") {

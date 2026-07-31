@@ -1,8 +1,35 @@
-# React + TypeScript + Vite
+# Plain Logger — frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The UI for **Plain Logger**, an internal diagnostic tool for Tier-2 support
+specialists. Paste a raw JSON error log and it returns two things: a
+technical **specialist diagnostic**, and a plain-language **employee-facing
+message** to send to whoever filed the ticket. The lookup is a deterministic
+match against a known-errors table — no LLM anywhere in the path.
 
-Currently, two official plugins are available:
+React + TypeScript + Vite. Talks to the separate `plain-logger-backend` API
+via `VITE_API_BASE_URL`.
+
+## What the UI does
+
+**Parse Log tab** — paste a payload, get the two messages side by side, each
+with a copy button, plus a running history of recent parses.
+
+- *Wrapped payloads work.* Real logs arrive inside a logging-library
+  envelope (Sentry's `extra`, axios's `response.data`, Winston's `meta`).
+  The backend searches nested objects and arrays, so a code two levels down
+  still matches.
+- *Every result names where the code came from.* A short line above the
+  result cards reports the exact path — `error_code` for a top-level hit,
+  `meta.error.error_code` for a wrapped one — and flags nested paths
+  explicitly, so a surprising match is traceable rather than taken on faith.
+
+**Tickets tab** — the active work queue. Filter by status, sort by severity,
+open a ticket to re-parse its payload, edit the stored messages, or create a
+template for a code that isn't mapped yet.
+
+## Vite template notes
+
+Two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
@@ -33,8 +60,7 @@ See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rule
 
 ## Testing
 
-This is the UI for **Plain Logger** and talks to the separate
-`plain-logger-backend` API (expected at `../plain-logger-backend`).
+The backend is expected at `../plain-logger-backend`.
 
 - **Unit / component tests** (Vitest + Testing Library, mocked API — no
   servers needed):
