@@ -84,4 +84,35 @@ test.describe('Parse Log Flow', () => {
     await page.waitForSelector('text=Code not recognized');
     expect(page.locator('text=Code not recognized')).toBeTruthy();
   });
+
+  test('should suggest the real code when an unmapped one is a near miss', async ({ page }) => {
+    await page.goto('/');
+
+    // A typo of the seeded `node.temperature`.
+    const textarea = page.locator('textarea');
+    await textarea.fill('{"error_code": "node.temperatur", "node": "node-104"}');
+
+    const parseButton = page.locator('button:has-text("Parse Log")').nth(1);
+    await parseButton.click();
+
+    await page.waitForSelector('text=Code not recognized');
+
+    const list = page.getByTestId('suggestion-list');
+    await expect(list).toBeVisible();
+    await expect(list.getByText('node.temperature')).toBeVisible();
+    await expect(list.locator('li').first()).toContainText('% match');
+  });
+
+  test('should offer no suggestions for a genuinely novel code', async ({ page }) => {
+    await page.goto('/');
+
+    const textarea = page.locator('textarea');
+    await textarea.fill('{"error_code": "zzzzqqqq.wwwwvvvv.yyyy"}');
+
+    const parseButton = page.locator('button:has-text("Parse Log")').nth(1);
+    await parseButton.click();
+
+    await page.waitForSelector('text=Code not recognized');
+    await expect(page.getByTestId('suggestion-list')).toHaveCount(0);
+  });
 });

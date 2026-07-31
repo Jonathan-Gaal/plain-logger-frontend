@@ -95,7 +95,10 @@ function ParseLogResult({ result }: { result: ParseLogResponse }) {
     return (
       <div className="flex flex-col gap-2">
         <CodePathNote codePath={result.codePath ?? null} />
-        <UnmappedCard errorCode={result.errorCode} />
+        <UnmappedCard
+          errorCode={result.errorCode}
+          suggestions={result.suggestions}
+        />
       </div>
     );
   }

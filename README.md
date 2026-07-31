@@ -22,6 +22,12 @@ with a copy button, plus a running history of recent parses.
   result cards reports the exact path — `error_code` for a top-level hit,
   `meta.error.error_code` for a wrapped one — and flags nested paths
   explicitly, so a surprising match is traceable rather than taken on faith.
+- *An unrecognized code isn't a dead end.* Paste `node.temperatur` and the
+  card offers `node.temperature` as a near-miss, with its system, severity,
+  and a match percentage. Ranking is string distance over the same
+  known-errors table — no LLM, and the result stays *unmapped*, so a lead is
+  never presented as a match. A genuinely novel code shows no suggestions at
+  all rather than three bad guesses.
 
 **Tickets tab** — the active work queue. Filter by status, sort by severity,
 open a ticket to re-parse its payload, edit the stored messages, or create a

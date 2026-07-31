@@ -278,7 +278,10 @@ export function TicketDetailModal({
                 </div>
               )}
               {parseResult.status === "unmapped" && (
-                <UnmappedCard errorCode={parseResult.errorCode} />
+                <UnmappedCard
+                  errorCode={parseResult.errorCode}
+                  suggestions={parseResult.suggestions}
+                />
               )}
               {(parseResult.status === "invalid_payload" || parseResult.status === "error") && (
                 <p className="text-xs text-red-600 dark:text-red-400">{parseResult.message}</p>

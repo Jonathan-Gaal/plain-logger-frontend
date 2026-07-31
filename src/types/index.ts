@@ -21,11 +21,29 @@ export interface ParseLogMatchedResponse {
   historyId: string;
 }
 
+/**
+ * A known error code ranked as a near-miss for an unmapped one. Always a
+ * pointer at a real row in the known-errors table — never generated text.
+ */
+export interface Suggestion {
+  errorCode: string;
+  internalSystem: string;
+  severity: Severity;
+  /** 0–1. Higher is closer to the code that was pasted. */
+  confidence: number;
+}
+
 export interface ParseLogUnmappedResponse {
   status: "unmapped";
   errorCode: string | null;
   /** See ParseLogMatchedResponse.codePath. */
   codePath?: string | null;
+  /**
+   * Closest known codes, best first — empty when nothing scored above the
+   * backend's noise floor. Optional so the UI still type-checks against a
+   * backend build that predates the field.
+   */
+  suggestions?: Suggestion[];
   specialistDiagnostic: null;
   employeeMessage: null;
   historyId: string;
