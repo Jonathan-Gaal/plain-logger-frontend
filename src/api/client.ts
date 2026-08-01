@@ -4,6 +4,7 @@ import type {
   ParseLogResponse,
   Ticket,
   TicketStatus,
+  UnmappedGroup,
   UpdateErrorTemplateRequest,
   UpdateTicketRequest,
 } from "../types";
@@ -53,6 +54,13 @@ export async function fetchHistory(limit = 20): Promise<HistoryEntry[]> {
 
 export async function deleteHistoryEntry(id: string): Promise<void> {
   await request<{ status: string }>(`/api/history/${id}`, { method: "DELETE" });
+}
+
+export async function fetchUnmapped(limit = 25): Promise<UnmappedGroup[]> {
+  const data = await request<{ status: string; unmapped: UnmappedGroup[] }>(
+    `/api/unmapped?limit=${limit}`
+  );
+  return data.unmapped ?? [];
 }
 
 export async function fetchTickets(status?: TicketStatus | "all"): Promise<Ticket[]> {

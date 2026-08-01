@@ -75,6 +75,19 @@ export interface HistoryEntry {
   escalateToDev: boolean | null;
 }
 
+/**
+ * One error code's worth of unmapped activity — a gap in the known-errors
+ * table, sized by how often it's been hit.
+ */
+export interface UnmappedGroup {
+  errorCode: string;
+  hitCount: number;
+  firstSeen: string;
+  lastSeen: string;
+  /** Closest known code, or null when nothing resembles it. */
+  topSuggestion: Suggestion | null;
+}
+
 export interface TicketMatchedTemplate {
   id: string;
   internalSystem: string;

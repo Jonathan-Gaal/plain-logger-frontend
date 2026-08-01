@@ -33,6 +33,13 @@ with a copy button, plus a running history of recent parses.
 open a ticket to re-parse its payload, edit the stored messages, or create a
 template for a code that isn't mapped yet.
 
+**Unmapped Codes tab** — the gap queue. Every code that's been parsed but has
+no template, grouped with a hit count and a first/last-seen window, worst gap
+first, each with its closest known code as a lead. Parse history already
+recorded all of this; grouping it answers the question a Tier-2 lead actually
+has — *which missing template is costing us the most?* — instead of leaving
+it buried in a list nobody scrolls back through.
+
 ## Vite template notes
 
 Two official plugins are available:

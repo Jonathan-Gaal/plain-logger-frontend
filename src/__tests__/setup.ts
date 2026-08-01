@@ -46,6 +46,9 @@ export const mockServer = setupServer(
       ],
     });
   }),
+  http.get('*/api/unmapped', () => {
+    return HttpResponse.json({ status: 'ok', unmapped: mockUnmapped });
+  }),
   http.get('http://localhost:3000/api/tickets', ({ request }) => {
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
@@ -94,6 +97,33 @@ export const mockServer = setupServer(
     );
   })
 );
+
+/**
+ * Gap-queue rows: one frequent miss that resembles a known code, and one
+ * one-off that resembles nothing. Ordered by hit count, as the API returns
+ * them.
+ */
+export const mockUnmapped = [
+  {
+    errorCode: 'node.temperatur',
+    hitCount: 14,
+    firstSeen: '2026-07-03T09:12:00.000Z',
+    lastSeen: '2026-07-30T16:40:00.000Z',
+    topSuggestion: {
+      errorCode: 'node.temperature',
+      internalSystem: 'node-agent',
+      severity: 'low',
+      confidence: 0.83,
+    },
+  },
+  {
+    errorCode: 'zzzz.novel',
+    hitCount: 1,
+    firstSeen: '2026-07-29T11:00:00.000Z',
+    lastSeen: '2026-07-29T11:00:00.000Z',
+    topSuggestion: null,
+  },
+];
 
 export const mockTickets = [
   {

@@ -2,9 +2,10 @@ import { useState } from "react";
 import { ParseLogPanel } from "./components/ParseLogPanel";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { TicketsPanel } from "./components/TicketsPanel";
+import { UnmappedQueuePanel } from "./components/UnmappedQueuePanel";
 import { cn } from "./lib/utils";
 
-type Tab = "parse" | "tickets";
+type Tab = "parse" | "tickets" | "unmapped";
 
 function App() {
   const [tab, setTab] = useState<Tab>("parse");
@@ -31,18 +32,26 @@ function App() {
           <TabButton active={tab === "tickets"} onClick={() => setTab("tickets")}>
             Tickets
           </TabButton>
+          {/*
+            "Unmapped Codes", not "Unmapped" — the Tickets panel already has
+            an "Unmapped" filter pill, and both are on screen at once when
+            that tab is open.
+          */}
+          <TabButton active={tab === "unmapped"} onClick={() => setTab("unmapped")}>
+            Unmapped Codes
+          </TabButton>
         </div>
       </nav>
 
       <main className="mx-auto max-w-4xl px-4 py-6">
-        {tab === "parse" ? (
+        {tab === "parse" && (
           <div className="flex flex-col gap-6">
             <ParseLogPanel onParsed={() => setHistoryRefreshKey((k) => k + 1)} />
             <HistoryPanel refreshKey={historyRefreshKey} />
           </div>
-        ) : (
-          <TicketsPanel />
         )}
+        {tab === "tickets" && <TicketsPanel />}
+        {tab === "unmapped" && <UnmappedQueuePanel />}
       </main>
     </div>
   );
