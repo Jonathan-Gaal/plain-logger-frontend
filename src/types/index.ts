@@ -88,6 +88,37 @@ export interface UnmappedGroup {
   topSuggestion: Suggestion | null;
 }
 
+/** Dashboard figures from GET /api/stats. All rates are 0–1, never NaN. */
+export interface Stats {
+  parses: {
+    total: number;
+    matched: number;
+    unmapped: number;
+    invalid: number;
+    matchRate: number;
+  };
+  coverage: {
+    templateCount: number;
+    distinctCodesSeen: number;
+    codesWithTemplate: number;
+    codesMissingTemplate: number;
+    coverageRate: number;
+  };
+  routing: {
+    selfServiceTemplates: number;
+    escalationTemplates: number;
+    selfServiceRate: number;
+  };
+  tickets: {
+    total: number;
+    open: number;
+    inProgress: number;
+    resolved: number;
+    bySeverity: Record<Severity, number>;
+  };
+  topCodes: { errorCode: string; count: number; hasTemplate: boolean }[];
+}
+
 export interface TicketMatchedTemplate {
   id: string;
   internalSystem: string;

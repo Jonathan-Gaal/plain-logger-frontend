@@ -3,9 +3,10 @@ import { ParseLogPanel } from "./components/ParseLogPanel";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { TicketsPanel } from "./components/TicketsPanel";
 import { UnmappedQueuePanel } from "./components/UnmappedQueuePanel";
+import { DashboardPanel } from "./components/DashboardPanel";
 import { cn } from "./lib/utils";
 
-type Tab = "parse" | "tickets" | "unmapped";
+type Tab = "parse" | "tickets" | "unmapped" | "dashboard";
 
 function App() {
   const [tab, setTab] = useState<Tab>("parse");
@@ -40,6 +41,9 @@ function App() {
           <TabButton active={tab === "unmapped"} onClick={() => setTab("unmapped")}>
             Unmapped Codes
           </TabButton>
+          <TabButton active={tab === "dashboard"} onClick={() => setTab("dashboard")}>
+            Dashboard
+          </TabButton>
         </div>
       </nav>
 
@@ -52,6 +56,7 @@ function App() {
         )}
         {tab === "tickets" && <TicketsPanel />}
         {tab === "unmapped" && <UnmappedQueuePanel />}
+        {tab === "dashboard" && <DashboardPanel />}
       </main>
     </div>
   );

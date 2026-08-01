@@ -33,6 +33,12 @@ with a copy button, plus a running history of recent parses.
 open a ticket to re-parse its payload, edit the stored messages, or create a
 template for a code that isn't mapped yet.
 
+**Dashboard tab** — whether the tool is actually working. Match rate, catalog
+coverage against codes really seen, the self-service vs escalation split, the
+ticket queue by status and severity, and the five most-parsed codes with
+untemplated ones flagged. Every figure is a reading off data the app already
+writes, so nothing can drift out of sync — there are no counters to maintain.
+
 **Unmapped Codes tab** — the gap queue. Every code that's been parsed but has
 no template, grouped with a hit count and a first/last-seen window, worst gap
 first, each with its closest known code as a lead. Parse history already

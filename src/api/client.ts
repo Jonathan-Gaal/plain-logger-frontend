@@ -2,6 +2,7 @@ import type {
   ErrorTemplate,
   HistoryEntry,
   ParseLogResponse,
+  Stats,
   Ticket,
   TicketStatus,
   UnmappedGroup,
@@ -54,6 +55,16 @@ export async function fetchHistory(limit = 20): Promise<HistoryEntry[]> {
 
 export async function deleteHistoryEntry(id: string): Promise<void> {
   await request<{ status: string }>(`/api/history/${id}`, { method: "DELETE" });
+}
+
+export async function fetchStats(): Promise<Stats> {
+  const data = await request<{ status: string; stats: Stats; message?: string }>(
+    "/api/stats"
+  );
+  if (data.status !== "ok") {
+    throw new ApiError(data.message ?? "Failed to load stats.");
+  }
+  return data.stats;
 }
 
 export async function fetchUnmapped(limit = 25): Promise<UnmappedGroup[]> {

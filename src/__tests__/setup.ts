@@ -49,6 +49,9 @@ export const mockServer = setupServer(
   http.get('*/api/unmapped', () => {
     return HttpResponse.json({ status: 'ok', unmapped: mockUnmapped });
   }),
+  http.get('*/api/stats', () => {
+    return HttpResponse.json({ status: 'ok', stats: mockStats });
+  }),
   http.get('http://localhost:3000/api/tickets', ({ request }) => {
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
@@ -124,6 +127,39 @@ export const mockUnmapped = [
     topSuggestion: null,
   },
 ];
+
+/**
+ * Dashboard figures. Chosen so every rate lands on a distinct, unambiguous
+ * percentage — 40/50/25/etc. — rather than values that could coincide and
+ * make a wrong-field assertion pass by luck.
+ */
+export const mockStats = {
+  parses: { total: 50, matched: 20, unmapped: 25, invalid: 5, matchRate: 0.4 },
+  coverage: {
+    templateCount: 40,
+    distinctCodesSeen: 12,
+    codesWithTemplate: 6,
+    codesMissingTemplate: 6,
+    coverageRate: 0.5,
+  },
+  routing: {
+    selfServiceTemplates: 10,
+    escalationTemplates: 30,
+    selfServiceRate: 0.25,
+  },
+  tickets: {
+    total: 8,
+    open: 3,
+    inProgress: 2,
+    resolved: 3,
+    bySeverity: { low: 1, medium: 2, high: 4, critical: 1 },
+  },
+  topCodes: [
+    { errorCode: 'node.psu', count: 9, hasTemplate: true },
+    { errorCode: 'mystery.code', count: 4, hasTemplate: false },
+    { errorCode: 'solo.code', count: 1, hasTemplate: true },
+  ],
+};
 
 export const mockTickets = [
   {
