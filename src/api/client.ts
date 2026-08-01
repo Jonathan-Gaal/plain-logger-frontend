@@ -10,7 +10,31 @@ import type {
   UpdateTicketRequest,
 } from "../types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+// Resolve the backend URL. In dev, default to the local backend on :3000.
+// In a PRODUCTION build, a missing VITE_API_BASE_URL previously fell back to
+// "http://localhost:3000" — which can never work for a real visitor (their
+// browser's "localhost" is their own machine), so the ticket list just came up
+// blank with no clue why. Now: in production we default to the known deployed
+// backend and warn loudly, so a forgotten env var degrades gracefully instead
+// of silently breaking. Set VITE_API_BASE_URL in Vercel to override this.
+const DEPLOYED_BACKEND_URL = "https://plain-logger-backend-pearl.vercel.app";
+
+function resolveApiBaseUrl(): string {
+  const fromEnv = import.meta.env.VITE_API_BASE_URL;
+  if (fromEnv) return fromEnv;
+  // import.meta.env.PROD is true in `vite build` output, false in `vite dev`.
+  if (import.meta.env.PROD) {
+    console.warn(
+      "[plain-logger] VITE_API_BASE_URL is not set for this production build. " +
+        `Falling back to ${DEPLOYED_BACKEND_URL}. Set VITE_API_BASE_URL in your ` +
+        "Vercel project settings and redeploy to make this explicit."
+    );
+    return DEPLOYED_BACKEND_URL;
+  }
+  return "http://localhost:3000";
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 class ApiError extends Error {
   constructor(message: string) {
